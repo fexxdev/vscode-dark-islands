@@ -1,168 +1,71 @@
-# Islands Dark Theme Installer for Windows
+# Islands Dark minimal Windows installer
 
 param()
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Islands Dark Theme Installer for Windows" -ForegroundColor Cyan
-Write-Host "================================================" -ForegroundColor Cyan
-Write-Host ""
+function ConvertTo-FileUrl {
+    param([string]$Path)
+    $resolved = (Resolve-Path $Path).Path
+    return ([System.Uri]$resolved).AbsoluteUri
+}
 
-# Check if VS Code is installed
-$codePath = Get-Command "code" -ErrorAction SilentlyContinue
-if (-not $codePath) {
-    # Try to find code in common locations
+function Find-CodeCommand {
+    $codePath = Get-Command "code" -ErrorAction SilentlyContinue
+    if ($codePath) { return $codePath.Source }
+
     $possiblePaths = @(
         "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd",
         "$env:ProgramFiles\Microsoft VS Code\bin\code.cmd",
         "${env:ProgramFiles(x86)}\Microsoft VS Code\bin\code.cmd"
     )
-
-    $found = $false
-    foreach ($path in $possiblePaths) {
-        if (Test-Path $path) {
-            $env:Path += ";$(Split-Path $path)"
-            $found = $true
-            break
-        }
+    foreach ($candidate in $possiblePaths) {
+        if (Test-Path $candidate) { return $candidate }
     }
-
-    if (-not $found) {
-        Write-Host "Error: VS Code CLI (code) not found!" -ForegroundColor Red
-        Write-Host "Please install VS Code and make sure 'code' command is in your PATH."
-        Write-Host "You can do this by:"
-        Write-Host "  1. Open VS Code"
-        Write-Host "  2. Press Ctrl+Shift+P"
-        Write-Host "  3. Type 'Shell Command: Install code command in PATH'"
-        exit 1
-    }
+    return $null
 }
 
-Write-Host "VS Code CLI found" -ForegroundColor Green
+Write-Host "Islands Dark minimal installer" -ForegroundColor Cyan
+Write-Host "This installs only the native color theme helper and prints the manual CSS setup." -ForegroundColor Cyan
+Write-Host ""
 
-# Get the directory where this script is located
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$package = Get-Content (Join-Path $scriptDir "package.json") -Raw | ConvertFrom-Json
+$extensionDirName = "$($package.publisher).$($package.name)-$($package.version)"
+$extensionDir = Join-Path $env:USERPROFILE ".vscode\extensions\$extensionDirName"
+$cssUrl = ConvertTo-FileUrl (Join-Path $scriptDir "custom-css\islands-dark.css")
 
-Write-Host ""
-Write-Host "Step 1: Installing Islands Dark theme extension..."
-
-# Install by copying to VS Code extensions directory
-$extDir = "$env:USERPROFILE\.vscode\extensions\bwya77.islands-dark-1.0.0"
-if (Test-Path $extDir) {
-    Remove-Item -Recurse -Force $extDir
+Write-Host "Installing native Islands Dark color theme to $extensionDir..."
+if (Test-Path $extensionDir) {
+    Remove-Item -Recurse -Force $extensionDir
 }
-New-Item -ItemType Directory -Path $extDir -Force | Out-Null
-Copy-Item "$scriptDir\package.json" "$extDir\" -Force
-Copy-Item "$scriptDir\themes" "$extDir\themes" -Recurse -Force
+New-Item -ItemType Directory -Path $extensionDir -Force | Out-Null
+Copy-Item (Join-Path $scriptDir "package.json") $extensionDir -Force
+Copy-Item (Join-Path $scriptDir "themes") $extensionDir -Recurse -Force
 
-if (Test-Path "$extDir\themes") {
-    Write-Host "Theme extension installed to $extDir" -ForegroundColor Green
-} else {
-    Write-Host "Failed to install theme extension" -ForegroundColor Red
-    exit 1
-}
-
-# Remove extensions.json so VS Code rebuilds it cleanly on next launch
-# (previous versions of this script wrote invalid content to this file)
-$extJsonPath = "$env:USERPROFILE\.vscode\extensions\extensions.json"
-if (Test-Path $extJsonPath) {
-    Remove-Item $extJsonPath -Force
-    Write-Host "Cleared extensions.json (VS Code will rebuild it)" -ForegroundColor Green
-}
-
-Write-Host ""
-Write-Host "Step 2: Installing Custom UI Style extension..."
-try {
-    $output = code --install-extension subframe7536.custom-ui-style --force 2>&1
-    Write-Host "Custom UI Style extension installed" -ForegroundColor Green
-} catch {
-    Write-Host "Could not install Custom UI Style extension automatically" -ForegroundColor Yellow
-    Write-Host "   Please install it manually from the Extensions marketplace"
-}
-
-Write-Host ""
-Write-Host "Step 3: Installing Bear Sans UI fonts..."
-$fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
-
-# Try user fonts first
-if (-not (Test-Path $fontDir)) {
-    New-Item -ItemType Directory -Path $fontDir -Force | Out-Null
-}
-
-try {
-    $fonts = Get-ChildItem "$scriptDir\fonts\*.otf"
-    foreach ($font in $fonts) {
-        try {
-            Copy-Item $font.FullName $fontDir -Force -ErrorAction SilentlyContinue
-        } catch {
-            # Silently continue if copy fails
-        }
+$codeCommand = Find-CodeCommand
+if ($codeCommand) {
+    Write-Host "Installing Custom CSS and JS Loader..."
+    & $codeCommand --install-extension be5invis.vscode-custom-css --force | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Could not install Custom CSS and JS Loader automatically. Install it manually from VS Code Extensions." -ForegroundColor Yellow
     }
-
-    Write-Host "Fonts installed" -ForegroundColor Green
-    Write-Host "   Note: You may need to restart applications to use the new fonts" -ForegroundColor DarkGray
-} catch {
-    Write-Host "Could not install fonts automatically" -ForegroundColor Yellow
-    Write-Host "   Please manually install the fonts from the 'fonts/' folder"
-    Write-Host "   Select all .otf files and right-click > Install"
+} else {
+    Write-Host "VS Code CLI 'code' was not found. Install Custom CSS and JS Loader manually." -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "Step 4: Applying VS Code settings..."
-$settingsDir = "$env:APPDATA\Code\User"
-if (-not (Test-Path $settingsDir)) {
-    New-Item -ItemType Directory -Path $settingsDir -Force | Out-Null
-}
-
-$settingsFile = Join-Path $settingsDir "settings.json"
-
-# Backup existing settings if they exist
-if (Test-Path $settingsFile) {
-    $backupFile = "$settingsFile.pre-islands-dark"
-    Copy-Item $settingsFile $backupFile -Force
-    Write-Host "Existing settings.json backed up to:" -ForegroundColor Yellow
-    Write-Host "   $backupFile"
-    Write-Host "   You can restore your old settings from this file if needed."
-}
-
-# Copy Islands Dark settings
-Copy-Item "$scriptDir\settings.json" $settingsFile -Force
-Write-Host "Islands Dark settings applied" -ForegroundColor Green
-
+Write-Host "Theme helper installed. Finish manually:" -ForegroundColor Green
+Write-Host "1. Install the .otf files from ./fonts if you want the exact typography."
+Write-Host "2. Add this to VS Code settings.json:"
 Write-Host ""
-Write-Host "Step 5: Enabling Custom UI Style..."
-
-# Check if this is the first run
-$firstRunFile = Join-Path $scriptDir ".islands_dark_first_run"
-if (-not (Test-Path $firstRunFile)) {
-    New-Item -ItemType File -Path $firstRunFile | Out-Null
-    Write-Host ""
-    Write-Host "Important Notes:" -ForegroundColor Yellow
-    Write-Host "   - IBM Plex Mono and FiraCode Nerd Font Mono need to be installed separately"
-    Write-Host "   - After VS Code reloads, you may see a 'corrupt installation' warning"
-    Write-Host "   - This is expected - click the gear icon and select 'Don't Show Again'"
-    Write-Host ""
-    Read-Host "Press Enter to continue and reload VS Code"
-}
-
-Write-Host "   Applying CSS customizations..."
-
+Write-Host '   "workbench.colorTheme": "Islands Dark",'
+Write-Host '   "vscode_custom_css.statusbar": true,'
+Write-Host '   "vscode_custom_css.imports": ['
+Write-Host "     `"$cssUrl`""
+Write-Host '   ]'
 Write-Host ""
-Write-Host "Islands Dark theme has been installed!" -ForegroundColor Green
+Write-Host "3. Run Command Palette > Enable Custom CSS and JS, or Reload Custom CSS and JS."
+Write-Host "4. Reload VS Code."
 Write-Host ""
-
-# Quit VS Code and relaunch so Custom UI Style fully initializes and patches CSS
-Write-Host "   Closing VS Code..." -ForegroundColor Cyan
-Stop-Process -Name "Code" -Force -ErrorAction SilentlyContinue
-Start-Sleep -Seconds 3
-
-Write-Host "   Relaunching VS Code..." -ForegroundColor Cyan
-Start-Process "code" -ErrorAction SilentlyContinue
-
-Write-Host ""
-Write-Host "Done!" -ForegroundColor Green
-Write-Host ""
-Write-Host "If the CSS customizations are not applied, open the Command Palette" -ForegroundColor Yellow
-Write-Host "(Ctrl+Shift+P) and run: Custom UI Style: Reload" -ForegroundColor Yellow
-
-Start-Sleep -Seconds 3
+Write-Host "This script did not edit settings.json or install fonts."

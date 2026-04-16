@@ -1,61 +1,25 @@
-# Islands Dark Theme Bootstrap Installer for Windows
+﻿# Islands Dark Bootstrap Installer for Windows
 # One-liner: irm https://raw.githubusercontent.com/bwya77/vscode-dark-islands/main/bootstrap.ps1 | iex
 
 param()
 
 $ErrorActionPreference = "Stop"
 
-echo "🏝️  Islands Dark Theme Bootstrap Installer"
-echo "=========================================="
-echo ""
-
 $RepoUrl = "https://github.com/bwya77/vscode-dark-islands.git"
 $Branch = "main"
-$InstallDir = "$env:TEMP\islands-dark-temp"
+$InstallDir = Join-Path $env:USERPROFILE "vscode-dark-islands"
 
-echo "📥 Step 1: Downloading Islands Dark..."
-echo "   Repository: $RepoUrl"
-
-# Remove old temp directory if exists
-if (Test-Path $InstallDir) {
-    Remove-Item -Recurse -Force $InstallDir
-}
-
-# Clone repository
-try {
-    git clone $RepoUrl $InstallDir --quiet --branch $Branch
-} catch {
-    echo "❌ Failed to download Islands Dark"
-    echo "   Make sure Git is installed: https://git-scm.com/download/win"
-    exit 1
-}
-
-echo "✓ Downloaded successfully"
-echo ""
-
-echo "🚀 Step 2: Running installer..."
-echo ""
-
-# Run installer
-cd $InstallDir
-try {
-    .\install.ps1
-} catch {
-    echo "❌ Installation failed"
-    echo $_.Exception.Message
-    exit 1
-}
-
-# Cleanup
-echo ""
-echo "🧹 Step 3: Cleaning up..."
-$remove = Read-Host "   Remove temporary files? (y/n)"
-if ($remove -eq 'y' -or $remove -eq 'Y') {
-    Remove-Item -Recurse -Force $InstallDir
-    echo "✓ Temporary files removed"
+if (Test-Path (Join-Path $InstallDir ".git")) {
+    Write-Host "Updating Islands Dark at $InstallDir..." -ForegroundColor Cyan
+    git -C $InstallDir pull --ff-only
+} elseif (Test-Path $InstallDir) {
+    throw "Install directory already exists but is not a git checkout: $InstallDir"
 } else {
-    echo "   Files kept at: $InstallDir"
+    Write-Host "Downloading Islands Dark to $InstallDir..." -ForegroundColor Cyan
+    git clone $RepoUrl $InstallDir --quiet --branch $Branch
 }
 
-echo ""
-echo "🎉 Done! Enjoy your Islands Dark theme!"
+Write-Host "Running installer..." -ForegroundColor Cyan
+& (Join-Path $InstallDir "install.ps1")
+
+Write-Host "Keep this folder in place. The CSS import points to it: $InstallDir" -ForegroundColor Yellow
