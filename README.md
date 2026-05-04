@@ -20,7 +20,7 @@ A custom VS Code theme with floating panels, rounded corners, glass borders, a p
 ### Quick install (macOS/Linux)
 
 ```bash
-git clone https://github.com/fexxdev/vscode-dark-islands.git ~/vscode-dark-islands
+git clone https://github.com/raaid3/vscode-dark-islands.git ~/vscode-dark-islands
 cd ~/vscode-dark-islands
 ./install.sh
 ```
@@ -28,7 +28,7 @@ cd ~/vscode-dark-islands
 ### Quick install (Windows)
 
 ```powershell
-git clone https://github.com/fexxdev/vscode-dark-islands.git $env:USERPROFILE\vscode-dark-islands
+git clone https://github.com/raaid3/vscode-dark-islands.git $env:USERPROFILE\vscode-dark-islands
 cd $env:USERPROFILE\vscode-dark-islands
 .\install.ps1
 ```

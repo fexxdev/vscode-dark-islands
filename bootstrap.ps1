@@ -1,5 +1,5 @@
 ﻿# Islands Dark Bootstrap Installer for Windows
-# One-liner: irm https://raw.githubusercontent.com/bwya77/vscode-dark-islands/main/bootstrap.ps1 | iex
+# One-liner: irm https://raw.githubusercontent.com/raaid3/vscode-dark-islands/main/bootstrap.ps1 | iex
 
 param()
 
