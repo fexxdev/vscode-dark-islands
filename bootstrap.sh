@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="https://github.com/bwya77/vscode-dark-islands.git"
+REPO_URL="https://github.com/raaid3/vscode-dark-islands.git"
 BRANCH="main"
 INSTALL_DIR="$HOME/vscode-dark-islands"
 

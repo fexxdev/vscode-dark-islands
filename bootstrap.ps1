@@ -5,7 +5,7 @@ param()
 
 $ErrorActionPreference = "Stop"
 
-$RepoUrl = "https://github.com/bwya77/vscode-dark-islands.git"
+$RepoUrl = "https://github.com/raaid3/vscode-dark-islands.git"
 $Branch = "main"
 $InstallDir = Join-Path $env:USERPROFILE "vscode-dark-islands"
 
