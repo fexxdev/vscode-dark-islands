@@ -13,5 +13,6 @@ merge-settings.ps1
 animations.css
 *.md
 !README.md
+assets
 .gitignore
 .vscodeignore
